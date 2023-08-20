@@ -175,7 +175,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 			)
 	){
 		if(showTips) {
-			Text(text = "当前版本为 1.0 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
+			Text(text = "当前版本为 1.1 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
 		}
 		
 		
