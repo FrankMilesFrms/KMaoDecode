@@ -49,12 +49,13 @@ class MainActivity : ComponentActivity()
 	override fun onCreate(savedInstanceState: Bundle?)
 	{
 		super.onCreate(savedInstanceState)
-		val names = arrayOf("", "", "", "")
+		val names = arrayOf("", "", "", "", "")
 		val sharedPreferences = getSharedPreferences("frms", MODE_PRIVATE)
 		names[0] = sharedPreferences.getString(SHOW_TIPS, "true")!!
 		names[1] = sharedPreferences.getString(INPUT, "")!!
 		names[2] = sharedPreferences.getString(OUTPUT, "")!!
 		names[3] = sharedPreferences.getString(DEBUG, "false")!!
+		names[4] = sharedPreferences.getString(LOW_MEMORY_MODE, "false")!!
 		val editor = sharedPreferences.edit()
 		
 		setContent {
@@ -71,7 +72,7 @@ class MainActivity : ComponentActivity()
 							}
 					) { key: String, value: String ->  
 						editor.putString(key, value)
-						editor.commit()
+						editor.apply()
 					}
 				}
 			}
@@ -94,7 +95,7 @@ class MainActivity : ComponentActivity()
 		
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
 			if (flag) {
-				Toast.makeText(this, "申请权限以读取文件", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "申请权限以读取文件", Toast.LENGTH_SHORT).show()
 				ActivityCompat.requestPermissions(
 						this,
 						arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -102,9 +103,9 @@ class MainActivity : ComponentActivity()
 						), 100)
 				
 				if (!Environment.isExternalStorageManager()) {
-					val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-					intent.data = Uri.parse("package:$packageName");
-					startActivityForResult(intent, 1024);
+					val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+					intent.data = Uri.parse("package:$packageName")
+					startActivityForResult(intent, 1024)
 				}
 			}
 		}
@@ -153,6 +154,10 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 		mutableStateOf(array[0] == "true")
 	}
 	
+	var lowMemoryMode by remember {
+		mutableStateOf(array[4] == "true")
+	}
+	
 	if(showDialog)
 	{
 		ResultDialog(
@@ -161,6 +166,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 				key = key,
 				option = aesOption,
 				onDone = onDone,
+				lowMemoryMode = lowMemoryMode,
 				saveInfo = saveFileName
 		) {
 			showDialog = false
@@ -175,7 +181,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 			)
 	){
 		if(showTips) {
-			Text(text = "当前版本为 1.1 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
+			Text(text = "当前版本为 1.2 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
 		}
 		
 		
@@ -188,9 +194,8 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 		{
 			Text(
 					text = "可能存在的Bug: \n" +
-							"1. 所有小说全部读入内存，再行写出，可能引发内存不足的风险\n" +
-							"2. 单线程读取，请不要在生成完之前结束程序，即使它可能造成短暂的系统卡顿\n" +
-							"3. 由于是按照文件前缀的数字排序，不能保证一定正确，有问题请反馈。"
+							"1. 单线程读取，请不要在生成完之前结束程序，即使它可能造成短暂的系统卡顿\n" +
+							"2. 由于是按照文件前缀的数字排序，不能保证一定正确，有问题请反馈。"
 			)
 			Spacer(modifier = Modifier.height(15.dp))
 			Text(text = "警告！软件暂时不支持Android/data的读写，因此，请将小说文件夹复制到其他可访问目录下，以便于读取，小说文件夹位于：/storage/emulated/0/Android/data/com.kmxs.reader/files/KmxsReader/books/")
@@ -231,19 +236,28 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 		OutlinedTextField(
 				value = outputFile,
 				onValueChange = {
-					outputFile = it;
+					outputFile = it
 				},
 				label = {
 					Text(text = "请输入 输出文件 完整目录")
 				},
 				modifier = Modifier.fillMaxWidth()
 		)
-		
+		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
+			Checkbox(
+					checked = lowMemoryMode,
+					onCheckedChange = {
+						lowMemoryMode = lowMemoryMode.not()
+						onSaveData(DEBUG, lowMemoryMode.toString())
+					}
+			)
+			
+			Text(text = "低内存模式：适用于大文件，减低写入内存峰值，但会消耗更多时间。")
+		}
 		if(showTips)
 		{
 			Spacer(modifier = Modifier.height(15.dp))
 			Text(text = "以下输入框不懂不要乱动↓")
-			
 		}
 		Spacer(modifier = Modifier.height(15.dp))
 		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
@@ -261,7 +275,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 		OutlinedTextField(
 				value = key,
 				onValueChange = {
-					key = it;
+					key = it
 				},
 				label = {
 					Text(text = "AES密匙")
@@ -272,7 +286,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 		OutlinedTextField(
 				value = aesOption,
 				onValueChange = {
-					aesOption = it;
+					aesOption = it
 				},
 				label = {
 					Text(text = "AES/工作模式/填充方式")
@@ -314,8 +328,16 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 }
 
 @Composable
-fun ResultDialog(input: String, output: String, key : String, option:String, saveInfo : Boolean,onDone:(String) ->Unit = {},onClose:()->Unit= {})
-{
+fun ResultDialog(
+		input: String,
+		output: String,
+		key : String,
+		option:String,
+		saveInfo : Boolean,
+		lowMemoryMode: Boolean,
+		onDone:(String) ->Unit = {},
+		onClose:()->Unit= {}
+) {
 	val res = check(input = input, output = output)
 	var click by remember {
 		mutableStateOf(true)
@@ -333,7 +355,7 @@ fun ResultDialog(input: String, output: String, key : String, option:String, sav
 					Text(text = res.first.toString())
 					Button(onClick = {
 						click = false
-						buildNovel(File(input), File(output),key, option, saveInfo).let {
+						buildNovel(File(input), File(output),key, option, saveInfo, lowMemoryMode = lowMemoryMode).let {
 							onDone(it)
 						}
 									 }, modifier = Modifier.fillMaxWidth(), enabled = res.second and click) {

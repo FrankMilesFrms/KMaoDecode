@@ -102,7 +102,7 @@ fun String.lexerCompareTxt(b: String) : Int
 
 fun String.getPrefix(): String = substring(0, indexOf('.'))
 
-fun buildNovel(input: File, output: File, key : String, option:String, saveInfo: Boolean): String
+fun buildNovel(input: File, output: File, key : String, option:String, saveInfo: Boolean, lowMemoryMode: Boolean): String
 {
 	var message = ""
 	var count = 1
@@ -138,22 +138,31 @@ fun buildNovel(input: File, output: File, key : String, option:String, saveInfo:
 							}
 						}
 						.append(String(p)).append('\n')
-				
+				if(lowMemoryMode) {
+					FileUtil.appendUtf8String(str.toString(), output)
+					str.delete(0, str.length)
+				}
 				count++
 			}
 		}
 	}
 	
-	executorService.shutdown();
+	executorService.shutdown()
 	
 	while (true)
 	{
 		if(executorService.isTerminated)
 		{
-			FileUtil.writeString(str.toString(), output, StandardCharsets.UTF_8);
-			break;
+			if(lowMemoryMode.not()){
+				FileUtil.writeString(
+						str.toString(),
+						output,
+						StandardCharsets.UTF_8
+				)
+			}
+			break
 		}
 	}
-	message += ("结束！已经写入章节数"+(count-1));
+	message += ("结束！已经写入章节数"+(count-1))
 	return message
 }
