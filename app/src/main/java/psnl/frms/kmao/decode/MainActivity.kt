@@ -1,6 +1,5 @@
 package psnl.frms.kmao.decode
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -13,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,6 +49,14 @@ class MainActivity : ComponentActivity()
 	override fun onCreate(savedInstanceState: Bundle?)
 	{
 		super.onCreate(savedInstanceState)
+		val names = arrayOf("", "", "", "")
+		val sharedPreferences = getSharedPreferences("frms", MODE_PRIVATE)
+		names[0] = sharedPreferences.getString(SHOW_TIPS, "true")!!
+		names[1] = sharedPreferences.getString(INPUT, "")!!
+		names[2] = sharedPreferences.getString(OUTPUT, "")!!
+		names[3] = sharedPreferences.getString(DEBUG, "false")!!
+		val editor = sharedPreferences.edit()
+		
 		setContent {
 			KMaoDecodeTheme {
 				// A surface container using the 'background' color from the theme
@@ -54,8 +64,14 @@ class MainActivity : ComponentActivity()
 						modifier = Modifier.fillMaxSize(),
 						color = MaterialTheme.colorScheme.background
 				) {
-					GreetingPreview {
-						Toast.makeText(this@MainActivity, it, Toast.LENGTH_LONG).show()
+					GreetingPreview(
+							array = names,
+							onDone =  {
+								Toast.makeText(this@MainActivity, it, Toast.LENGTH_LONG).show()
+							}
+					) { key: String, value: String ->  
+						editor.putString(key, value)
+						editor.commit()
 					}
 				}
 			}
@@ -96,19 +112,29 @@ class MainActivity : ComponentActivity()
 	}
 }
 
+/**
+ *
+ * @param array Array<String> 初始数据，包含如下：
+ * 0. 是否开启提示（"false", "true", key: "showTips"）
+ * 1. 输入目标文件(key: "input")
+ * 2. 输出目标文件(key: "output")
+ * 3. 保留输出信息(key: "debug")
+ * @param onDone Function1<String, Unit>
+ * @param saveData Function2<[@kotlin.ParameterName] String, [@kotlin.ParameterName] String, Unit>
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GreetingPreview(onDone: (String) -> Unit)
+fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(key: String, value:String)->Unit)
 {
 	var showDialog by remember {
 		mutableStateOf(false)
 	}
 	var inputFile by remember {
-		mutableStateOf("")
+		mutableStateOf(array[1])
 	}
 	
 	var outputFile by remember {
-		mutableStateOf("")
+		mutableStateOf(array[2])
 	}
 	
 	var key by remember {
@@ -119,6 +145,14 @@ fun GreetingPreview(onDone: (String) -> Unit)
 		mutableStateOf("AES/CBC/PKCS5Padding")
 	}
 	
+	var saveFileName by remember {
+		mutableStateOf(array[3] == "true")
+	}
+	
+	var showTips by remember {
+		mutableStateOf(array[0] == "true")
+	}
+	
 	if(showDialog)
 	{
 		ResultDialog(
@@ -126,7 +160,8 @@ fun GreetingPreview(onDone: (String) -> Unit)
 				output = outputFile,
 				key = key,
 				option = aesOption,
-				onDone = onDone
+				onDone = onDone,
+				saveInfo = saveFileName
 		) {
 			showDialog = false
 		}
@@ -134,21 +169,46 @@ fun GreetingPreview(onDone: (String) -> Unit)
 	Column(modifier = Modifier
 			.fillMaxSize()
 			.verticalScroll(rememberScrollState())
-			.padding(start = 10.dp, end = 10.dp)
+			.padding(
+					start = 10.dp,
+					end = 10.dp
+			)
 	){
-		Text(text = "当前版本为 1.0 版本，勉强可用，后续如果有催更人数多，再行更新。催更/检查更新 请访问（长按复制）：")
+		if(showTips) {
+			Text(text = "当前版本为 1.0 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
+		}
+		
+		
 		SelectionContainer {
 			Text(text = "https://github.com/FrankMilesFrms/KMaoDecode")
 		}
 		
 		Spacer(modifier = Modifier.height(15.dp))
-		Text(
-				text = "可能存在的Bug: \n" +
-						"1. 所有小说全部读入内存，再行写出，可能引发内存不足的风险\n" +
-						"2. 单线程读取，请不要在生成完之前结束程序，即使它可能造成短暂的系统卡顿\n"
-		)
-		Spacer(modifier = Modifier.height(15.dp))
-		Text(text = "警告！软件暂时不支持Android/data的读写，因此，请将小说文件夹复制到其他可访问目录下，以便于读取，小说文件夹位于：/storage/emulated/0/Android/data/com.kmxs.reader/files/KmxsReader/books/")
+		if(showTips)
+		{
+			Text(
+					text = "可能存在的Bug: \n" +
+							"1. 所有小说全部读入内存，再行写出，可能引发内存不足的风险\n" +
+							"2. 单线程读取，请不要在生成完之前结束程序，即使它可能造成短暂的系统卡顿\n" +
+							"3. 由于是按照文件前缀的数字排序，不能保证一定正确，有问题请反馈。"
+			)
+			Spacer(modifier = Modifier.height(15.dp))
+			Text(text = "警告！软件暂时不支持Android/data的读写，因此，请将小说文件夹复制到其他可访问目录下，以便于读取，小说文件夹位于：/storage/emulated/0/Android/data/com.kmxs.reader/files/KmxsReader/books/")
+			Spacer(modifier = Modifier.height(15.dp))
+		}
+		
+		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
+			Checkbox(
+					checked = showTips,
+					onCheckedChange = {
+						showTips = showTips.not()
+						onSaveData(SHOW_TIPS, showTips.toString())
+					}
+			)
+			
+			Text(text = (if(showTips)"关闭" else "开启" )+"所有提示")
+		}
+		
 		Spacer(modifier = Modifier.height(15.dp))
 		OutlinedTextField(
 				value = inputFile,
@@ -160,8 +220,13 @@ fun GreetingPreview(onDone: (String) -> Unit)
 				},
 				modifier = Modifier.fillMaxWidth()
 		)
-		Spacer(modifier = Modifier.height(15.dp))
-		Text(text = "示例：假设我想输出的文件 在根目录下，文件为'a.txt'，那么，输入的路径是以'/sdcard/a.txt'（不含单引号）。")
+		
+		if(showTips)
+		{
+			Spacer(modifier = Modifier.height(15.dp))
+			Text(text = "示例：假设我想输出的文件 在根目录下，文件为'a.txt'，那么，输入的路径是以'/sdcard/a.txt'（不含单引号）。")
+			
+		}
 		Spacer(modifier = Modifier.height(15.dp))
 		OutlinedTextField(
 				value = outputFile,
@@ -173,8 +238,26 @@ fun GreetingPreview(onDone: (String) -> Unit)
 				},
 				modifier = Modifier.fillMaxWidth()
 		)
+		
+		if(showTips)
+		{
+			Spacer(modifier = Modifier.height(15.dp))
+			Text(text = "以下输入框不懂不要乱动↓")
+			
+		}
 		Spacer(modifier = Modifier.height(15.dp))
-		Text(text = "以下输入框不懂不要乱动↓")
+		Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically){
+			Checkbox(
+					checked = saveFileName,
+					onCheckedChange = {
+						saveFileName = saveFileName.not()
+						onSaveData(DEBUG, saveFileName.toString())
+					}
+			)
+			
+			Text(text = "保留输出信息在每章节正文开头（影响阅读）")
+		}
+		Spacer(modifier = Modifier.height(15.dp))
 		OutlinedTextField(
 				value = key,
 				onValueChange = {
@@ -200,10 +283,12 @@ fun GreetingPreview(onDone: (String) -> Unit)
 		Button(
 				onClick = {
 					showDialog = true
+					onSaveData(INPUT, inputFile)
+					onSaveData(OUTPUT, outputFile)
 				},
 				modifier = Modifier.fillMaxWidth()
 		) {
-			Text(text = "合并生成")
+			Text(text = "保存配置并生成")
 		}
 		
 		Spacer(modifier = Modifier.height(15.dp))
@@ -229,7 +314,7 @@ fun GreetingPreview(onDone: (String) -> Unit)
 }
 
 @Composable
-fun ResultDialog(input: String, output: String, key : String, option:String, onDone:(String) ->Unit = {},onClose:()->Unit= {})
+fun ResultDialog(input: String, output: String, key : String, option:String, saveInfo : Boolean,onDone:(String) ->Unit = {},onClose:()->Unit= {})
 {
 	val res = check(input = input, output = output)
 	var click by remember {
@@ -248,7 +333,7 @@ fun ResultDialog(input: String, output: String, key : String, option:String, onD
 					Text(text = res.first.toString())
 					Button(onClick = {
 						click = false
-						buildNovel(File(input), File(output),key, option).let {
+						buildNovel(File(input), File(output),key, option, saveInfo).let {
 							onDone(it)
 						}
 									 }, modifier = Modifier.fillMaxWidth(), enabled = res.second and click) {

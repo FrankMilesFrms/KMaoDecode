@@ -83,14 +83,33 @@ fun decrypt(str: String, key : String, option:String): ByteArray
 	} catch (unused: Exception) { ByteArray(size = 0) }
 }
 
-fun buildNovel(input: File, output: File, key : String, option:String): String
+/**
+ * if not contains point, mean the files are do not lexer.
+ * @receiver String
+ * @param b String
+ * @return Int
+ */
+fun String.lexerCompareTxt(b: String) : Int
+{
+	val txt = '.'
+	if(this.contains(txt) and b.contains(txt))
+	{
+		return getPrefix().toLong().compareTo(b.getPrefix().toLong())
+	}
+	
+	return compareTo(b)
+}
+
+fun String.getPrefix(): String = substring(0, indexOf('.'))
+
+fun buildNovel(input: File, output: File, key : String, option:String, saveInfo: Boolean): String
 {
 	var message = ""
 	var count = 1
 	val str = StringBuffer()
 	val executorService = Executors.newSingleThreadExecutor()
 	val queue = PriorityQueue { a: File, b: File ->
-		a.name.compareTo(b.name)
+		a.name.lexerCompareTxt(b.name)
 	}
 	input.listFiles()?.let { queue.addAll(it) }
 	
@@ -110,7 +129,16 @@ fun buildNovel(input: File, output: File, key : String, option:String): String
 				message += ("${poll.absoluteFile.name}   无法读取，错误文件！\n")
 			} else
 			{
-				str.append('第').append(count).append("章\n").append(String(p)).append('\n')
+				str.append('第').append(count).append("章\n")
+						.apply {
+							if(saveInfo)
+							{
+								append("文件名：").append(poll.name).append('\n')
+								append("绝对路径：").append(poll.absoluteFile).append('\n')
+							}
+						}
+						.append(String(p)).append('\n')
+				
 				count++
 			}
 		}
