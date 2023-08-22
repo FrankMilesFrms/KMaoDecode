@@ -102,8 +102,29 @@ fun String.lexerCompareTxt(b: String) : Int
 
 fun String.getPrefix(): String = substring(0, indexOf('.'))
 
-fun buildNovel(input: File, output: File, key : String, option:String, saveInfo: Boolean, lowMemoryMode: Boolean): String
+/**
+ * 构建小说
+ * @param input File 输入
+ * @param output File 输出
+ * @param key String 密匙
+ * @param option String 解密算法
+ * @param saveInfo Boolean debug模式
+ * @param lowMemoryMode Boolean 低内存模式
+ * @param autoFixPrefix Pair<String, Int> 自动追加内容，
+ * 在文章开头追加int位String，如果int为负，则补全文章开头的String至(-int)位
+ * @return String
+ */
+fun buildNovel(
+		input: File,
+		output: File,
+		key : String,
+		option:String,
+		saveInfo: Boolean,
+		lowMemoryMode: Boolean,
+//		autoFixPrefix: Pair<String, Int>
+): String
 {
+	var fileSize : Long = 0
 	var message = ""
 	var count = 1
 	val str = StringBuffer()
@@ -125,6 +146,7 @@ fun buildNovel(input: File, output: File, key : String, option:String, saveInfo:
 			f.forEach(stringBuilder::append)
 			
 			val p: ByteArray = decrypt(stringBuilder.toString(), key, option)
+			
 			if (p.isEmpty()) {
 				message += ("${poll.absoluteFile.name}   无法读取，错误文件！\n")
 			} else
@@ -138,7 +160,12 @@ fun buildNovel(input: File, output: File, key : String, option:String, saveInfo:
 							}
 						}
 						.append(String(p)).append('\n')
-				if(lowMemoryMode) {
+				
+				fileSize += str.length
+				
+				if(lowMemoryMode)
+				{
+//					autoPrefix(str, autoFixPrefix)
 					FileUtil.appendUtf8String(str.toString(), output)
 					str.delete(0, str.length)
 				}
@@ -153,7 +180,9 @@ fun buildNovel(input: File, output: File, key : String, option:String, saveInfo:
 	{
 		if(executorService.isTerminated)
 		{
-			if(lowMemoryMode.not()){
+			if(lowMemoryMode.not())
+			{
+//				autoPrefix(str, autoFixPrefix)
 				FileUtil.writeString(
 						str.toString(),
 						output,
@@ -166,3 +195,27 @@ fun buildNovel(input: File, output: File, key : String, option:String, saveInfo:
 	message += ("结束！已经写入章节数"+(count-1))
 	return message
 }
+
+///**
+// *自动追加内容
+// * @param str StringBuffer
+// * @param autoFixPrefix Pair<String, Int> 在文章开头追加int位String，
+// * 如果int为负，则补全文章开头的String至(-int)位
+// */
+//fun autoPrefix(
+//		str: StringBuffer,
+//		autoFixPrefix: Pair<String, Int>,
+//)
+//{
+//	if(autoFixPrefix.second == 0) {
+//		return
+//	}
+//	val deque = ArrayDeque<String>()
+//	var start = 0
+//	for(index in str.indices)
+//	{
+//		if(str[index] == '\n') {
+//			deque.addLast(str.substring(start, index))
+//		}
+//	}
+//}
