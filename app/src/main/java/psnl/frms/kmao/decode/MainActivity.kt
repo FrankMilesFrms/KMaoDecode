@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.io.File
 import psnl.frms.kmao.decode.ui.theme.KMaoDecodeTheme
+import java.io.File
 
 
 class MainActivity : ComponentActivity()
@@ -78,7 +78,8 @@ class MainActivity : ComponentActivity()
 			}
 		}
 	}
-	
+
+
 	@RequiresApi(Build.VERSION_CODES.R)
 	override fun onResume()
 	{
@@ -181,7 +182,7 @@ fun GreetingPreview(array: Array<String>, onDone: (String) -> Unit, onSaveData:(
 			)
 	){
 		if(showTips) {
-			Text(text = "当前版本为 1.2 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
+			Text(text = "当前版本为 1.3 版本，勉强可用，后续如果催更人数很多，再行更新。催更/检查更新 请访问（长按复制）：")
 		}
 		
 		
@@ -353,12 +354,17 @@ fun ResultDialog(
 			text = {
 				Column {
 					Text(text = res.first.toString())
-					Button(onClick = {
-						click = false
-						buildNovel(File(input), File(output),key, option, saveInfo, lowMemoryMode = lowMemoryMode).let {
-							onDone(it)
-						}
-									 }, modifier = Modifier.fillMaxWidth(), enabled = res.second and click) {
+					Button(
+						onClick = {
+							click = false
+
+							onDone(
+								buildNovel(File(input), File(output), key, option, saveInfo, lowMemoryMode = lowMemoryMode)
+							)
+						},
+						modifier = Modifier.fillMaxWidth(),
+						enabled = res.second and click
+					) {
 						Text(text = "生成")
 					}
 				}

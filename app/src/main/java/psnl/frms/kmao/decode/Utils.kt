@@ -43,7 +43,9 @@ fun check(input: String, output: String): Pair<StringBuilder, Boolean>
 	if(inputFile.canRead().not()) {
 		flag = false
 		stringBuilder.append("输入文件夹：\n").append(input).append("\n不可读！")
-	} else if(inputFile.isDirectory.not()) {
+	}
+
+	if(inputFile.isDirectory.not()) {
 		flag = false
 		stringBuilder.append("输入路径：\n").append(input).append("\n不是文件夹！")
 	}
@@ -54,13 +56,20 @@ fun check(input: String, output: String): Pair<StringBuilder, Boolean>
 	
 	val outputFile = File(output)
 	
-//	if(outputFile.canRead().not()) {
-//		flag = false
-//		stringBuilder.append("输出文件夹：\n").append(output).append("\n不可读！")
-//	} else
+	if(outputFile.parentFile?.canRead()?.not() == true)
+	{
+		flag = false
+		stringBuilder.append("输出文件所在路径：\n").append(output).append("\n不可读！")
+	}
+
 	if(outputFile.isFile) {
 		flag = false
-		stringBuilder.append("输出文件夹：\n").append(output).append("\n已经存在了！")
+		stringBuilder.append("输出文件：\n").append(output).append("\n已经存在了！")
+	}
+
+	if(outputFile.isDirectory) {
+		flag = false
+		stringBuilder.append("输出的路径：\n").append(output).append("\n是文件夹，请添写另一个名字作为文件！")
 	}
 	if(flag) {
 		stringBuilder.append("输出、输出文件填写正确，可以生成了！")
@@ -137,7 +146,13 @@ fun buildNovel(
 	while (queue.isNotEmpty())
 	{
 		val poll = queue.poll()!!
+
+		// 避免文件夹被读取
+		if(!poll.isFile) {
+			continue
+		}
 		executorService.submit {
+
 			val f = FileUtil.readLines(
 					poll,
 					StandardCharsets.UTF_8
@@ -178,17 +193,17 @@ fun buildNovel(
 	
 	while (true)
 	{
-		if(executorService.isTerminated)
+		if(executorService.isTerminated )
 		{
 			if(lowMemoryMode.not())
 			{
-//				autoPrefix(str, autoFixPrefix)
+				//				autoPrefix(str, autoFixPrefix)
 				FileUtil.writeString(
-						str.toString(),
-						output,
-						StandardCharsets.UTF_8
-				)
+					str.toString(),
+					output,
+					StandardCharsets.UTF_8)
 			}
+
 			break
 		}
 	}
